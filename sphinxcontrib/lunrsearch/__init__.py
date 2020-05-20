@@ -9,6 +9,12 @@ import sphinx.search
 from sphinx.util.osutil import copyfile
 from sphinx.jinja2glue import SphinxFileSystemLoader
 
+def _make_iter(inp):
+    """make sure input is an iterable"""
+    if not hasattr(inp, "__iter__"):
+        return (inp, )
+    return inp 
+
 
 class IndexBuilder(sphinx.search.IndexBuilder):
     def freeze(self):
@@ -25,6 +31,7 @@ class IndexBuilder(sphinx.search.IndexBuilder):
         store = {}
         c = itertools.count()
         for prefix, items in iteritems(data['objects']):
+            # This parses API objects 
             for name, (index, typeindex, _, shortanchor) in iteritems(items):
                 objtype = data['objtypes'][typeindex]
                 if objtype.startswith('cpp:'):
@@ -44,6 +51,31 @@ class IndexBuilder(sphinx.search.IndexBuilder):
                     'last_prefix': last_prefix,
                     'name': name,
                     'shortanchor': shortanchor,
+                }
+
+        titles = data['titles']
+        for titleterm, indices in data['titleterms'].items():
+            # Title components; the indices map to index in base_file_name
+            for index in _make_iter(indices):
+                store[next(c)] = {
+                    'filename': base_file_names[index],
+                    'objtype': "",
+                    'prefix': titleterm,
+                    'last_prefix': '',
+                    'name': titles[index],
+                    'shortanchor': ''
+                }
+
+        for term, indices in data['terms'].items():
+            # In-file terms
+            for index in _make_iter(indices):
+                store[next(c)] = {
+                    'filename': base_file_names[index],
+                    'objtype': "",
+                    'prefix': term,
+                    'last_prefix': '',
+                    'name': titles[index],
+                    'shortanchor': ''
                 }
 
         data.update({'store': store})

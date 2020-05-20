@@ -75,12 +75,19 @@ var searchModule = (function ($, lunr, Search, DOCUMENTATION_OPTIONS) {
 
         results = index.search(query);
         ul.empty().show();
+        var duplicates = [];
 
         if (results.length === 0) {
             ul.append($('<li><a href="#">No results found</a></li>'));
         } else {
             for (i = 0; i < Math.min(results.length, 5); i += 1) {
-                ul.append(createResultListElement(store[results[i].ref]));
+                var valref = store[results[i].ref].name;
+                if(duplicates.includes(valref)) {
+                  continue;
+                } else {
+                  ul.append(createResultListElement(store[results[i].ref]));
+                  duplicates.push(valref);
+                }
             }
         }
 
