@@ -53,6 +53,9 @@ coverage.xml
 # Sphinx documentation
 docs/_build/
 
+# Lunr index file
+lunrindex.json
+
 # PyBuilder
 target/
 .idea

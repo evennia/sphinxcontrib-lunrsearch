@@ -9,11 +9,26 @@ import sphinx.search
 from sphinx.util.osutil import copyfile
 from sphinx.jinja2glue import SphinxFileSystemLoader
 
+
+# pre-generate search index
+_PREGENERATE_INDEX = True
+_LUNR_INDEX_FILENAME = "lunrindex.json"
+
+lunr = None
+if _PREGENERATE_INDEX:
+    try:
+        # if python-lunr is available we pre-build the index
+        import lunr
+    except ImportError:
+        print("python package `lunr==0.5.8` required in order "
+              "to pre-build search index.")
+
+
 def _make_iter(inp):
     """make sure input is an iterable"""
     if not hasattr(inp, "__iter__"):
         return (inp, )
-    return inp 
+    return inp
 
 
 class IndexBuilder(sphinx.search.IndexBuilder):
@@ -28,10 +43,10 @@ class IndexBuilder(sphinx.search.IndexBuilder):
             # Sphinx < 1.5 format
             base_file_names = data['filenames']
 
-        store = {}
+        lunrdocuments = {}
         c = itertools.count()
         for prefix, items in iteritems(data['objects']):
-            # This parses API objects 
+            # This parses API objects
             for name, (index, typeindex, _, shortanchor) in iteritems(items):
                 objtype = data['objtypes'][typeindex]
                 if objtype.startswith('cpp:'):
@@ -43,8 +58,9 @@ class IndexBuilder(sphinx.search.IndexBuilder):
                     last_prefix = prefix.split('::')[-1]
                 else:
                     last_prefix = prefix.split('.')[-1]
-
-                store[next(c)] = {
+                ref = next(c)
+                lunrdocuments[ref] = {
+                    'ref': str(ref),
                     'filename': base_file_names[index],
                     'objtype': objtype,
                     'prefix': prefix,
@@ -57,7 +73,9 @@ class IndexBuilder(sphinx.search.IndexBuilder):
         for titleterm, indices in data['titleterms'].items():
             # Title components; the indices map to index in base_file_name
             for index in _make_iter(indices):
-                store[next(c)] = {
+                ref = next(c)
+                lunrdocuments[ref] = {
+                    'ref': str(ref),
                     'filename': base_file_names[index],
                     'objtype': "",
                     'prefix': titleterm,
@@ -69,7 +87,9 @@ class IndexBuilder(sphinx.search.IndexBuilder):
         for term, indices in data['terms'].items():
             # In-file terms
             for index in _make_iter(indices):
-                store[next(c)] = {
+                ref = next(c)
+                lunrdocuments[ref] = {
+                    'ref': str(ref),
                     'filename': base_file_names[index],
                     'objtype': "",
                     'prefix': term,
@@ -78,7 +98,25 @@ class IndexBuilder(sphinx.search.IndexBuilder):
                     'shortanchor': ''
                 }
 
-        data.update({'store': store})
+        if lunr:
+            print("\nPre-building search index ...")
+            # pre-compile the data store into a lunr index
+            fields = ["ref", "prefix", dict(field_name="name", boost=10)]
+            lunr_index = lunr.lunr(ref='ref', fields=fields,
+                                   documents=list(lunrdocuments.values()))
+            lunr_index_json = lunr_index.serialize()
+            lunr_index_json = json.dumps(lunr_index_json)
+
+            try:
+                fname = join(dirname(__file__), "js", _LUNR_INDEX_FILENAME)
+                with open(fname, 'w') as fil:
+                    fil.write(lunr_index_json)
+            except Exception as err:
+                print("Failed saving lunr index to", fname)
+
+        # we also need this for back-referencing that which the index finds
+        data.update({'lunrdocuments': lunrdocuments})
+
         return data
 
 
@@ -100,7 +138,11 @@ def builder_inited(app):
 def copy_static_files(app, _):
     # because we're using the extension system instead of the theme system,
     # it's our responsibility to copy over static files outselves.
-    files = ['js/searchbox.js', 'css/searchbox.css']
+    files = [join('js', 'searchbox.js'), join('css', 'searchbox.css')]
+
+    if lunr:
+        files.append(join('js', _LUNR_INDEX_FILENAME))
+
     for f in files:
         src = join(dirname(__file__), f)
         dest = join(app.outdir, '_static', f)
@@ -112,7 +154,7 @@ def copy_static_files(app, _):
 def setup(app):
     # adds <script> and <link> to each of the generated pages to load these
     # files.
-    app.add_javascript('https://cdnjs.cloudflare.com/ajax/libs/lunr.js/0.6.0/lunr.min.js')
+    app.add_javascript('https://cdnjs.cloudflare.com/ajax/libs/lunr.js/2.3.8/lunr.js')
     app.add_stylesheet('css/searchbox.css')
     app.add_javascript('js/searchbox.js')
 

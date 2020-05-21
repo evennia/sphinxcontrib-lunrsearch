@@ -13,23 +13,28 @@ $.fn.textWidth = function(text, font) {
 var searchModule = (function ($, lunr, Search, DOCUMENTATION_OPTIONS) {
     "use strict";
 
-    var store = Search.store,
-        index = null,
-        highlight = $("#ls_lunrsearch-highlight").value === "true";
+    var lunrdocuments = Search.lunrdocuments;
+    var index = null;
+    var highlight = $("#ls_lunrsearch-highlight").value === "true";
 
-    lunr.tokenizer.seperator = '.';
-    index = lunr(function () {
+    $.getJSON("_static/js/lunrindex.json", function(json) {
+      // First, try to load the pre-generated index from file
+      index = lunr.Index.load(json);
+    }).fail(function(json, textStatus, error) {
+      console.log("Could not load pre-generated lunr index (" + error + "). Generating index on the fly.")
+      // We found no pre-built index; use the lunrdocuments data store to build index on the fly
+      index = lunr(function () {
+        this.ref('ref');
+        this.field('name' , { boost: 10 });
         this.field('prefix');
-        this.field('name', { boost: 10 });
-        this.ref('id');
-    });
-
-    $.each(store, function (id, value) {
-        index.add({
-            id: id,
-            name: value.name,
-            prefix: value.prefix
-        });
+        for (var docobj of Object.values(lunrdocuments)) {
+          this.add({
+            "ref": docobj.ref,
+            "name": docobj.name,
+            "prefix": docobj.prefix
+          })
+        }
+      });
     });
 
     $("#ls_search-field")
@@ -72,7 +77,6 @@ var searchModule = (function ($, lunr, Search, DOCUMENTATION_OPTIONS) {
             ul.empty().hide();
             return;
         }
-
         results = index.search(query);
         ul.empty().show();
         var duplicates = [];
@@ -81,11 +85,12 @@ var searchModule = (function ($, lunr, Search, DOCUMENTATION_OPTIONS) {
             ul.append($('<li><a href="#">No results found</a></li>'));
         } else {
             for (i = 0; i < Math.min(results.length, 5); i += 1) {
-                var valref = store[results[i].ref].name;
+                var valref = lunrdocuments[results[i].ref].name;
+                console.log("valref ", valref, lunrdocuments[results[i].ref].prefix)
                 if(duplicates.includes(valref)) {
                   continue;
                 } else {
-                  ul.append(createResultListElement(store[results[i].ref]));
+                  ul.append(createResultListElement(lunrdocuments[results[i].ref]));
                   duplicates.push(valref);
                 }
             }
