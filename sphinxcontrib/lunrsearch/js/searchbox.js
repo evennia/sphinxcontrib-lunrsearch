@@ -20,6 +20,7 @@ var searchModule = (function ($, lunr, Search, DOCUMENTATION_OPTIONS) {
     $.getJSON("_static/js/lunrindex.json", function(json) {
       // First, try to load the pre-generated index from file
       index = lunr.Index.load(json);
+      console.log("Pre-generated lunr search index loaded.")
     }).fail(function(json, textStatus, error) {
       console.log("Could not load pre-generated lunr index (" + error + "). Generating index on the fly.")
       // We found no pre-built index; use the lunrdocuments data store to build index on the fly
@@ -84,14 +85,20 @@ var searchModule = (function ($, lunr, Search, DOCUMENTATION_OPTIONS) {
         if (results.length === 0) {
             ul.append($('<li><a href="#">No results found</a></li>'));
         } else {
+            console.log("matches:", results.length, results)
             for (i = 0; i < Math.min(results.length, 5); i += 1) {
-                var valref = lunrdocuments[results[i].ref].name;
-                console.log("valref ", valref, lunrdocuments[results[i].ref].prefix)
-                if(duplicates.includes(valref)) {
-                  continue;
+                var doc = lunrdocuments[results[i].ref];
+                var dupref = doc.name;
+                if (doc.objtype === "py:method") {
+                  dupref = doc.prefix;
+                }
+                console.log(doc)
+
+                if(duplicates.includes(dupref)) {
+                    continue;
                 } else {
-                  ul.append(createResultListElement(lunrdocuments[results[i].ref]));
-                  duplicates.push(valref);
+                  ul.append(createResultListElement(doc));
+                  duplicates.push(dupref);
                 }
             }
         }
@@ -136,13 +143,13 @@ var searchModule = (function ($, lunr, Search, DOCUMENTATION_OPTIONS) {
     } // end buildHref
 
     function createResultListElement(s) {
-        var prefix = (s.objtype === "py:method") ? (s.last_prefix + ".") : "",
-            ul = $('#ls_search-results');
+
+        var ul = $('#ls_search-results');
 
         return $('<li>')
             .append($('<a>')
                 .attr('href', buildHref(s))
-                .text(prefix + s.name)
+                .text(s.displayname)
                 .mouseenter(function () {
                     ul.find('li a').removeClass('hover');
                     $(this).addClass('hover');

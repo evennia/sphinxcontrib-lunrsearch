@@ -50,14 +50,27 @@ class IndexBuilder(sphinx.search.IndexBuilder):
             for name, (index, typeindex, _, shortanchor) in iteritems(items):
                 objtype = data['objtypes'][typeindex]
                 if objtype.startswith('cpp:'):
+                    # C++ API entities
                     split =  name.rsplit('::', 1)
                     if len(split) != 2:
                         warnings.warn("What's up with %s?" % str((prefix, name, objtype)))
                         continue
                     prefix, name = split
                     last_prefix = prefix.split('::')[-1]
+                    displayname = name
+
+                elif objtype.startswith("py:"):
+                    # Python API entitites 
+                    last_prefix = prefix.split('.')[-1]
+                    if objtype == "py:method":
+                        displayname = last_prefix + "." + name  
+                    else:
+                        displayname = prefix + "." + name
+
                 else:
                     last_prefix = prefix.split('.')[-1]
+                    displayname = name
+
                 ref = next(c)
                 lunrdocuments[ref] = {
                     'ref': str(ref),
@@ -66,6 +79,7 @@ class IndexBuilder(sphinx.search.IndexBuilder):
                     'prefix': prefix,
                     'last_prefix': last_prefix,
                     'name': name,
+                    'displayname': displayname,
                     'shortanchor': shortanchor,
                 }
 
@@ -81,6 +95,7 @@ class IndexBuilder(sphinx.search.IndexBuilder):
                     'prefix': titleterm,
                     'last_prefix': '',
                     'name': titles[index],
+                    'displayname': titles[index],
                     'shortanchor': ''
                 }
 
@@ -95,6 +110,7 @@ class IndexBuilder(sphinx.search.IndexBuilder):
                     'prefix': term,
                     'last_prefix': '',
                     'name': titles[index],
+                    'displayname': titles[index],
                     'shortanchor': ''
                 }
 
@@ -112,7 +128,7 @@ class IndexBuilder(sphinx.search.IndexBuilder):
                 with open(fname, 'w') as fil:
                     fil.write(lunr_index_json)
             except Exception as err:
-                print("Failed saving lunr index to", fname)
+                print("Failed saving lunr index to", fname, err)
 
         # we also need this for back-referencing that which the index finds
         data.update({'lunrdocuments': lunrdocuments})
@@ -154,7 +170,7 @@ def copy_static_files(app, _):
 def setup(app):
     # adds <script> and <link> to each of the generated pages to load these
     # files.
-    app.add_javascript('https://cdnjs.cloudflare.com/ajax/libs/lunr.js/2.3.8/lunr.js')
+    app.add_javascript('https://cdnjs.cloudflare.com/ajax/libs/lunr.js/2.3.8/lunr.min.js')
     app.add_stylesheet('css/searchbox.css')
     app.add_javascript('js/searchbox.js')
 
