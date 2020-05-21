@@ -85,7 +85,7 @@ var searchModule = (function ($, lunr, Search, DOCUMENTATION_OPTIONS) {
         if (results.length === 0) {
             ul.append($('<li><a href="#">No results found</a></li>'));
         } else {
-            console.log("matches:", results.length, results)
+            // console.log("matches:", results.length, results)
             for (i = 0; i < Math.min(results.length, 5); i += 1) {
                 var doc = lunrdocuments[results[i].ref];
                 var dupref = doc.name;

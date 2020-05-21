@@ -12,13 +12,15 @@ Evennia modifications
 ---------------------
 
 The ``evennia-mods`` branch adds the following additions:
-- Add tokenization of all parts of documentation corpus, not just the API docs
 - Add the optional ability to pre-generate the search index as a static file
   (activate by having the `lunr==0.5.8` Python package installed when building docs)
 - Up the supported `lunr.js` version from 0.6.0 to latest stable 2.3.8, also
   resolves a bunch of compatibility issues moving to latest lunr.
 - Make the searchbox not show the same name more than once (it's not very helpful
   to the user). 
+- Add tokenization of all parts of documentation corpus, not just the API docs, split
+  them into separate index files since (especially the terms-file) can become very 
+  large for a bigger document corpus. 
 
 The pre-generated index will be loaded into the static file storage as
 `js/lunrindex.json`. The updated `searchbox.js` will load it if possible,

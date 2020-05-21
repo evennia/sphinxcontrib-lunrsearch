@@ -99,20 +99,21 @@ class IndexBuilder(sphinx.search.IndexBuilder):
                     'shortanchor': ''
                 }
 
-        for term, indices in data['terms'].items():
-            # In-file terms
-            for index in _make_iter(indices):
-                ref = next(c)
-                lunrdocuments[ref] = {
-                    'ref': str(ref),
-                    'filename': base_file_names[index],
-                    'objtype': "",
-                    'prefix': term,
-                    'last_prefix': '',
-                    'name': titles[index],
-                    'displayname': titles[index],
-                    'shortanchor': ''
-                }
+        # this is just too big for regular use 
+        # for term, indices in data['terms'].items():
+        #     # In-file terms
+        #     for index in _make_iter(indices):
+        #         ref = next(c)
+        #         lunrdocuments[ref] = {
+        #             'ref': str(ref),
+        #             'filename': base_file_names[index],
+        #             'objtype': "",
+        #             'prefix': term,
+        #             'last_prefix': '',
+        #             'name': titles[index],
+        #             'displayname': titles[index],
+        #             'shortanchor': ''
+        #         }
 
         if lunr:
             print("\nPre-building search index ...")
